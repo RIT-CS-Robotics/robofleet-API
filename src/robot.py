@@ -12,10 +12,10 @@ class Robot:
 		self.sock.connect((self.robot_ip, self.port))
 
 	def nav_to(self, location):
-		command = f"GOTO:{location.upper()}\n"
+		command = f"NAV_TO:{location}\n"
 		self.sock.sendall(command.encode("utf-8"))
 		# block for now
-		response = self.sock.recv(1024).decode("utf-8")
+		response = self.sock.recv(1024).decode("utf-8").strip()
 		return response
 
 	def move(self, steps):

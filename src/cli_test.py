@@ -5,8 +5,7 @@ from ament_index_python import get_package_share_directory
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator
 
-PATH = get_package_share_directory('robofleet_core')
-PATH += '/map/'
+PATH = ""
 MAP_IMAGE = PATH+"golisano3v5.png"
 POINTS_FILE = PATH+"point_database.txt"
 
@@ -88,7 +87,7 @@ class PointDataset:
 class NavigatorController:
 
     def __init__(self):
-        rclpy.init()
+        #rclpy.init()
 
         self.navigator = BasicNavigator()
 
@@ -147,6 +146,8 @@ class NavigatorController:
 
 
 def main():
+    rclpy.init()
+
     pd = PointDataset(POINTS_FILE)
 
     requested_locations = sys.argv[1:]

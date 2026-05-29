@@ -5,4 +5,3 @@ r = Robot()
 
 print("move")
 print(r.nav_to("RNDLab"))
-print(r.nav_to("RNDLab"))
