@@ -1,5 +1,5 @@
 import socket, time, rclpy
-from rclpy.Node import Node
+from rclpy.node import Node
 from geometry_msgs.msg import Twist
 import threading
 
@@ -11,7 +11,7 @@ class Listener(Node):
 
 	def srv(self):
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		s.setscokopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		s.bind(('0.0.0.0', 10001))
 		s.listen(1)
 		while rclpy.ok():
@@ -30,3 +30,5 @@ class Listener(Node):
 def main():
 	rclpy.init()
 	rclpy.spin(Listener())
+
+main()

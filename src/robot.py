@@ -13,7 +13,7 @@ class Robot:
 
 	def nav_to(self, location):
 		command = f"GOTO:{location.upper()}\n"
-		self.socket.sendall(command.encode("utf-8"))
+		self.sock.sendall(command.encode("utf-8"))
 		# block for now
 		response = self.sock.recv(1024).decode("utf-8")
 		return response
