@@ -17,3 +17,15 @@ class Robot:
 		# block for now
 		response = self.sock.recv(1024).decode("utf-8")
 		return response
+
+	def move(self, steps):
+		command = f"MOVE:{steps}\n"
+		self.sock.sendall(command.encode("utf-8"))
+		response = self.sock.recv(1024).decode("utf-8")
+		return response
+
+	def rotate(self, degrees):
+		command = f"ROTATE:{degrees}\n"
+		self.sock.sendall(command.encode("utf-8"))
+		response = self.sock.recv(1024).decode("utf-8")
+		return response
