@@ -4,7 +4,7 @@ import os
 class Robot:
 	def __init__(self):
 		# self.robot_ip = os.environ.get()
-		self.robot_ip = "129.21.65.243" # laptop 3
+		self.robot_ip = "129.21.118.12" # laptop 1
 		self.port = 10001
 
 		# connect socket
