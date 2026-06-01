@@ -88,7 +88,7 @@ class Listener(Node):
 
 		print("Broken?")
 
-		self.goal_pub.publish(goal_msg.pose)
+#		self.goal_pub.publish(goal_msg.pose)
 
 		# send action goal synchronously
 		print("Submitting goal to Nav2 Server...")
