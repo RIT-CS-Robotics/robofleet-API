@@ -2,6 +2,8 @@
 import socket, time, rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
+from rclpy.executors import MultiThreadedExecutor
+
 from geometry_msgs.msg import Twist
 from nav2_msgs.action import NavigateToPose
 
@@ -90,11 +92,10 @@ class Listener(Node):
 
 		# send action goal synchronously
 		print("Submitting goal to Nav2 Server...")
-		send_goal_future - self.nav_client.send_goal_async(goal_msg)
+		send_goal_future = self.nav_client.send_goal_async(goal_msg)
 
-		# blocking using sleep
-		while not send_goal_future.done():
-			time.sleep(0.05) # TEMP
+		# built in executor engine to wait
+		rclpy.spin_until_future_complete(self, send_goal_future)
 
 		# if nav2 is mad or not
 		goal_handle = send_goal_future.result()
@@ -106,8 +107,7 @@ class Listener(Node):
 
 		# future tracking execution
 		result_future = goal_handle.get_result_async()
-		while not result_future.done():
-			time.sleep(0.1)
+		rclpy.spin_until_future_complete(self, result_future)
 
 		status = result_future.result().status
 
@@ -160,7 +160,7 @@ def main():
 	try:
 		rclpy.spin(node)
 	except KeyboardInterrupt:
-		pass
+		print("ERROR HERE")
 	finally:
 		node.destroy_node()
 		rclpy.shutdown()
