@@ -28,11 +28,11 @@ class Listener(Node):
 
 		# move speed hardcoded FOR NOW (TEMP)
 		cmd.linear.x = 0.2
-		if value < 0:
+		if steps < 0:
 			cmd.linear.x = -0.2
 
 		self.pub.publish(cmd)
-		time.sleep(abs(value) * 1.5) # also hardcoded for now
+		time.sleep(abs(steps) * 1.5) # also hardcoded for now
 		self.pub.publish(Twist())
 
 	def rotate(self, degrees):
@@ -41,11 +41,11 @@ class Listener(Node):
 
 		# turn speed hardcoded FOR NOW (TEMP)
 		cmd.angular.z = 0.6
-		if value < 0:
+		if steps < 0:
 			cmd.linear.z = -0.6
 
 		self.pub.publish(cmd)
-		time.sleep(abs(value) / 90.0)
+		time.sleep(abs(steps) / 90.0)
 		self.pub.publish(Twist())
 
 	def nav_to(self, location):

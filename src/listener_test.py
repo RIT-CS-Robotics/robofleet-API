@@ -15,6 +15,10 @@ class Listener(Node):
 	def __init__(self):
 		super().__init__('listener')
 		self.pub = self.create_publisher(Twist, '/cmd_vel', 10)
+
+		# previously CLI_TEST imports
+		PATH = "" # adjust as needed
+		POINTS_FILE = PATH+"point_database.txt"
 		self.pd = PointDataset(POINTS_FILE)
 
 		# native ros2 ActionClient targeting nav2 server
