@@ -14,11 +14,13 @@ else:
 
 r.move(1)
 
-pose = r.get_pos()
-
-if (isinstance(pose, tuple)):
-	x, y = pose
-	print(f"Pose: {x:.3f}, {y:.3f}")
-else:
-	print(f"Server response error: {pose}")
-
+i = 0
+while i < 10:
+	pose = r.get_pos()
+	r.move(1)
+	if (isinstance(pose, tuple)):
+		x, y = pose
+		print(f"Pose: {x:.3f}, {y:.3f}")
+	else:
+		print(f"Server response error: {pose}")
+	i = i + 1
