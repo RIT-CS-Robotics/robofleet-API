@@ -37,12 +37,12 @@ class Listener(Node):
 			"ROTATE":	self.rotate,
 #			"GO_TO":	self.go_to,
 			"NAV_TO":	self.nav_to,
-			"GET_POS":	self.get_pos,
-			"SET_POS": 	self.set_pos
+			"GET_POS":	self.get_pos
+#			"SET_POS": 	self.set_pos
 		}
 
 		threading.Thread(target=self.srv, daemon=True).start()
-
+	"""
 	def set_pos(self, location):
 		name = str(location).strip()
 		try:
@@ -72,7 +72,7 @@ class Listener(Node):
 		# publish
 		self.init_pose_pub.publish(msg)
 		return "DONE"
-
+	"""
 	def move(self, steps):
 		print(f"MOVING {steps} steps.")
 		cmd = Twist()
@@ -125,32 +125,28 @@ class Listener(Node):
 		goal_msg.pose.pose.position.y = float(map_y)
 		goal_msg.pose.pose.orientation.w = 1.0 # FORWARD FACING (TEMP)
 
-		print("Broken?")
+		goal_msg.pose.pose.orientation.x = 0.0
+		goal_msg.pose.pose.orientation.y = 0.0
+		goal_msg.pose.pose.orientation.z = 0.0
 
 #		self.goal_pub.publish(goal_msg.pose)
 
 		# send action goal synchronously
 		print("Submitting goal to Nav2 Server...")
-		send_goal_future = self.nav_client.send_goal_async(goal_msg)
-
-		# wait
-		while not send_goal_future.done():
-			time.sleep(0.05)
+		send_goal_future = self.nav_client.send_goal(goal_msg)
 
 		# if nav2 is mad or not
-		goal_handle = send_goal_future.result()
-		if not goal_handle.accepted:
-			print("Nav2 is mad about the goal... what did you do")
-			return "REJECTED"
+#		goal_handle = send_goal_future.result()
+#		if not send_goal_future.accept:
+#			print("Nav2 is mad about the goal... what did you do")
+#			return "REJECTED"
 
-		print("Nav2 happy. Navigating...")
+#		print("Nav2 happy. Navigating...")
 
 		# future tracking execution
-		result_future = goal_handle.get_result_async()
-		while not result_future.done():
-			time.sleep(0.05)
+#		result_future = send_goal_future.get_result()
 
-		status = result_future.result().status
+		status = send_goal_future.status
 
 
 		# success

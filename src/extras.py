@@ -3,7 +3,7 @@ import math
 import cv2 as cv
 import rclpy, tf2_ros
 from rclpy.node import Node
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, PoseStamped
 from tf2_ros import TransformException
 
 RESOLUTION = 0.388
@@ -67,7 +67,7 @@ class PoseReader(Node):
 		self.has_valid_pose = False
 
 		# sync publisher
-		self.pose_pub = self.create_publisher(Point, '/robot_pos_actual', 10)
+		self.pose_pub = self.create_publisher(PoseStamped, '/robot_pos', 10)
 
 		# timer part
 		self.timer = self.create_timer(0.05, self.sync_pose_time)
@@ -86,10 +86,21 @@ class PoseReader(Node):
 			self.has_valid_pose = True
 
 			# publish
-			msg = Point()
-			msg.x = self.current_x
-			msg.y = self.current_y
-			msg.z = 0.0
+			msg = PoseStamped()
+			msg.header.frame_id = FIXED_FRAME
+			msg.header.stamp = self.get_clock().now().to_msg()
+
+			# position
+			msg.pose.position.x = self.current_x
+			msg.pose.position.y = self.current_y
+			msg.pose.position.z = 0.0
+
+			# orientation 
+			msg.pose.orientation.x = transform.transform.rotation.x
+			msg.pose.orientation.y = transform.transform.rotation.y
+			msg.pose.orientation.z = transform.transform.rotation.z
+			msg.pose.orientation.w = transform.transform.rotation.w
+
 			self.pose_pub.publish(msg)
 
 		except TransformException:
