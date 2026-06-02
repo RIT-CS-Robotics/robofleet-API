@@ -4,17 +4,19 @@ from rclpy.node import Node
 from rclpy.action import ActionClient
 from rclpy.executors import MultiThreadedExecutor
 
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, PoseWithCovarianceStamped
 from nav2_msgs.action import NavigateToPose
 
 import threading
 
-from cli_test import PointDataset, POINTS_FILE
+from extras import PointDataset, PoseReader
 
 class Listener(Node):
 	def __init__(self):
 		super().__init__('listener')
 		self.pub = self.create_publisher(Twist, '/cmd_vel', 10)
+		self.init_pose_pub = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
+		self.pose_reader = PoseReader()
 
 		# previously CLI_TEST imports
 		PATH = "" # adjust as needed
@@ -34,35 +36,68 @@ class Listener(Node):
 			"MOVE":		self.move,
 			"ROTATE":	self.rotate,
 #			"GO_TO":	self.go_to,
-			"NAV_TO":	self.nav_to
+			"NAV_TO":	self.nav_to,
+			"GET_POS":	self.get_pos,
+			"SET_POS": 	self.set_pos
 		}
 
 		threading.Thread(target=self.srv, daemon=True).start()
 
+	def set_pos(self, location):
+		name = str(location).strip()
+		try:
+			map_x, map_y = map(float, location.split(","))
+		except ValueError:
+			print(f"Error: Invalid coordinate format")
+			return "INVALID SET_POS"
+
+		print(f"Setting initial pose to raw map coordinates: ({map_x:.3f}, {map_y:.3f}")
+
+		# initial pose message
+		msg = PoseWithCovarianceStamped()
+		msg.header.frame_id = "map"
+		msg.header.stamp = self.get_clock().now().to_msg()
+
+		# position
+		msg.pose.pose.position.x = map_x
+		msg.pose.pose.position.y = map_y
+		msg.pose.pose.position.z = 0.0
+
+		# ???
+		msg.pose.covariance = [0.0] * 36
+		msg.pose.covariance[0] = 0.25
+		msg.pose.covariance[7] = 0.25
+		msg.pose.covariance[35] = 0.06
+
+		# publish
+		self.init_pose_pub.publish(msg)
+		return "DONE"
+
 	def move(self, steps):
 		print(f"MOVING {steps} steps.")
 		cmd = Twist()
-
+		steps_val = float(steps)
 		# move speed hardcoded FOR NOW (TEMP)
 		cmd.linear.x = 0.2
-		if value < 0:
+		if steps_val < 0:
 			cmd.linear.x = -0.2
 
 		self.pub.publish(cmd)
-		time.sleep(abs(value) * 1.5) # also hardcoded for now
+		time.sleep(abs(steps_val) * 1.5) # also hardcoded for now
 		self.pub.publish(Twist())
 
 	def rotate(self, degrees):
 		print(f"TURNING {degrees} degrees.")
 		cmd = Twist()
+		deg_val = float(degrees)
 
 		# turn speed hardcoded FOR NOW (TEMP)
 		cmd.angular.z = 0.6
-		if value < 0:
+		if steps_val < 0:
 			cmd.linear.z = -0.6
 
 		self.pub.publish(cmd)
-		time.sleep(abs(value) / 90.0)
+		time.sleep(abs(deg_val) / 90.0)
 		self.pub.publish(Twist())
 
 	def nav_to(self, location):
@@ -74,7 +109,7 @@ class Listener(Node):
 
 		# same stuff as cli_test.py
 		point = self.pd.lookup[name]
-		px, py = point.get_coords()
+		px, py = point
 		map_x, map_y = self.pd.pixel_to_map(px, py)
 
 		print(
@@ -98,8 +133,9 @@ class Listener(Node):
 		print("Submitting goal to Nav2 Server...")
 		send_goal_future = self.nav_client.send_goal_async(goal_msg)
 
-		# built in executor engine to wait
-		rclpy.spin_until_future_complete(self, send_goal_future)
+		# wait
+		while not send_goal_future.done():
+			time.sleep(0.05)
 
 		# if nav2 is mad or not
 		goal_handle = send_goal_future.result()
@@ -111,7 +147,8 @@ class Listener(Node):
 
 		# future tracking execution
 		result_future = goal_handle.get_result_async()
-		rclpy.spin_until_future_complete(self, result_future)
+		while not result_future.done():
+			time.sleep(0.05)
 
 		status = result_future.result().status
 
@@ -124,6 +161,20 @@ class Listener(Node):
 			print("Failed to reach destination.")
 			return "FAILED"
 
+
+	def get_pos(self):
+		"""
+		Get (x, y) coordinates of robot's location.
+		"""
+
+		print("Getting current robot position...")
+		try:
+			x, y = self.pose_reader.get_robot_pose()
+			resp = f"{x:.3f},{y:.3f}"
+			print(resp)
+			return resp
+		except Exception as e:
+			return "ERROR: Cannot get current pose"
 
 	def srv(self):
 		# socket stuff (common)
@@ -141,7 +192,7 @@ class Listener(Node):
 					# if string is empty, client dc
 					if not data:
 						break
-
+					response = "ERROR: failed"
 					# use data
 					if ":" in data:
 						cmd_type, value = data.split(":", 1)
@@ -149,20 +200,32 @@ class Listener(Node):
 
 						# value (param should be float!!)
 						if cmd_type in self.functions:
-							self.functions[cmd_type](value)
-							connect.sendall(b"DONE\n")
+							response = self.functions[cmd_type](value)
 						else:
-							connect.sendall(b"ERROR: unknown command")
+							response = f"ERROR: unknown command {cmd_type}"
+					# cmds without args
+					else:
+						cmd_type = data.upper()
+						if cmd_type in self.functions:
+							response = self.functions[cmd_type]()
+						else:
+							response = f"ERROR: invalid cmd"
+
+					connect.sendall(f"{response}\n".encode('utf-8'))
 			except Exception as e:
-				pass
+				print(f"Server exception: {e}")
 			finally:
 				connect.close()
 def main():
 	if not rclpy.ok():
 		rclpy.init()
 	node = Listener()
+
+	executor = MultiThreadedExecutor()
+	executor.add_node(node)
+	executor.add_node(node.pose_reader)
 	try:
-		rclpy.spin(node)
+		executor.spin()
 	except KeyboardInterrupt:
 		print("ERROR HERE")
 	finally:
