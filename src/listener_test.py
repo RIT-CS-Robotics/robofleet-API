@@ -133,20 +133,23 @@ class Listener(Node):
 
 		# send action goal synchronously
 		print("Submitting goal to Nav2 Server...")
-		send_goal_future = self.nav_client.send_goal(goal_msg)
+		send_goal_future = self.nav_client.send_goal_async(goal_msg)
+
+		rclpy.spin_until_future_complete(self, send_goal_future)
 
 		# if nav2 is mad or not
-#		goal_handle = send_goal_future.result()
-#		if not send_goal_future.accept:
-#			print("Nav2 is mad about the goal... what did you do")
-#			return "REJECTED"
+		goal_handle = send_goal_future.result()
+		if not goal_handle.accept:
+			print("Nav2 is mad about the goal... what did you do")
+			return "REJECTED"
 
-#		print("Nav2 happy. Navigating...")
+		print("Nav2 happy. Navigating...")
 
 		# future tracking execution
-#		result_future = send_goal_future.get_result()
+		result_future = goal_handle.get_result_async()
+		rclpy.spin_until_future_complete(self, result_future)
 
-		status = send_goal_future.status
+		status = result_future.result().status
 
 
 		# success
