@@ -12,10 +12,10 @@ if (isinstance(pose, tuple)):
 else:
 	print(f"Server response error: {pose}")
 
-r.move(1)
+r.nav_to("Office3511")
 
-i = 0
-while i < 10:
+i = 1
+while i < 2:
 	pose = r.get_pos()
 	r.move(1)
 	if (isinstance(pose, tuple)):

@@ -13,6 +13,9 @@ from extras import PointDataset, PoseReader
 
 class Listener(Node):
 	def __init__(self):
+		"""
+		Create a new Listener node.
+		"""
 		super().__init__('listener')
 		self.pub = self.create_publisher(Twist, '/cmd_vel', 10)
 		self.init_pose_pub = self.create_publisher(PoseWithCovarianceStamped, '/initialpose', 10)
@@ -37,38 +40,63 @@ class Listener(Node):
 			"ROTATE":	self.rotate,
 #			"GO_TO":	self.go_to,
 			"NAV_TO":	self.nav_to,
-			"GET_POS":	self.get_pos,
+			"GET_POS":	self.get_pos
+#			"SET_POS": 	self.set_pos
 		}
 
 		threading.Thread(target=self.srv, daemon=True).start()
 
 	def move(self, steps):
+		"""
+		Send a command to move the robot for {steps} time.
+
+		Arguments:
+		steps - the amount of time to move the robot for
+		"""
 		print(f"MOVING {steps} steps.")
 		cmd = Twist()
-
+		steps_val = float(steps)
 		# move speed hardcoded FOR NOW (TEMP)
 		cmd.linear.x = 0.2
-		if value < 0:
+		if steps_val < 0:
 			cmd.linear.x = -0.2
 
 		self.pub.publish(cmd)
-		time.sleep(abs(steps) * 1.5) # also hardcoded for now
+		time.sleep(abs(steps_val) * 1.5) # also hardcoded for now
 		self.pub.publish(Twist())
 
 	def rotate(self, degrees):
+		"""
+		Send a command to rotate the robot {degrees}.
+
+		Arguments:
+			degrees - a float to which to rotate robot by
+		"""
 		print(f"TURNING {degrees} degrees.")
 		cmd = Twist()
+		deg_val = float(degrees)
 
 		# turn speed hardcoded FOR NOW (TEMP)
 		cmd.angular.z = 0.6
-		if value < 0:
+		if steps_val < 0:
 			cmd.linear.z = -0.6
 
 		self.pub.publish(cmd)
-		time.sleep(abs(degrees) / 90.0)
+		time.sleep(abs(deg_val) / 90.0)
 		self.pub.publish(Twist())
 
 	def nav_to(self, location):
+		"""
+		Send a command to Nav2 to navigate to {location} location 
+		on the map.
+		Does not currently show the directions taken.
+
+		Arguments:
+			location - a string location from the database
+
+		Returns:
+			a string indicating navigation success or failure
+		"""
 		name = str(location).strip()
 
 		if name not in self.pd.lookup:
@@ -77,7 +105,7 @@ class Listener(Node):
 
 		# same stuff as cli_test.py
 		point = self.pd.lookup[name]
-		px, py = point.get_coords()
+		px, py = point
 		map_x, map_y = self.pd.pixel_to_map(px, py)
 
 		print(
@@ -93,7 +121,9 @@ class Listener(Node):
 		goal_msg.pose.pose.position.y = float(map_y)
 		goal_msg.pose.pose.orientation.w = 1.0 # FORWARD FACING (TEMP)
 
-		print("Broken?")
+		goal_msg.pose.pose.orientation.x = 0.0
+		goal_msg.pose.pose.orientation.y = 0.0
+		goal_msg.pose.pose.orientation.z = 0.0
 
 #		self.goal_pub.publish(goal_msg.pose)
 
@@ -101,13 +131,11 @@ class Listener(Node):
 		print("Submitting goal to Nav2 Server...")
 		send_goal_future = self.nav_client.send_goal_async(goal_msg)
 
-		# wait
-		while not send_goal_future.done():
-			time.sleep(0.05)
+		rclpy.spin_until_future_complete(self, send_goal_future)
 
 		# if nav2 is mad or not
 		goal_handle = send_goal_future.result()
-		if not goal_handle.accepted:
+		if not goal_handle.accept:
 			print("Nav2 is mad about the goal... what did you do")
 			return "REJECTED"
 
@@ -115,8 +143,7 @@ class Listener(Node):
 
 		# future tracking execution
 		result_future = goal_handle.get_result_async()
-		while not result_future_done():
-			time.sleep(0.05)
+		rclpy.spin_until_future_complete(self, result_future)
 
 		status = result_future.result().status
 
@@ -184,8 +211,6 @@ class Listener(Node):
 				print(f"Server exception: {e}")
 			finally:
 				connect.close()
-
-
 def main():
 	if not rclpy.ok():
 		rclpy.init()
@@ -194,9 +219,8 @@ def main():
 	executor = MultiThreadedExecutor()
 	executor.add_node(node)
 	executor.add_node(node.pose_reader)
-	
 	try:
-		rclpy.spin(node)
+		executor.spin()
 	except KeyboardInterrupt:
 		print("ERROR HERE")
 	finally:
